@@ -6,8 +6,38 @@
     <title>System Interactions</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
         #spinner {
             display: none;
+            font-size: 16px;
+            color: #007bff;
+            margin-top: 10px;
+        }
+        #graph {
+            border: 1px solid #ccc;
+            margin-top: 20px;
+            width: 100%;
+            height: 600px;
+        }
+        #queryInput {
+            width: 80%; /* Increase the width of the input box */
+            font-size: 16px;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+        .node {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+        .label {
+            fill: #333;
         }
     </style>
 </head>
@@ -16,7 +46,7 @@
     <input id="queryInput" type="text" value="What are the systems that interact with Finance System?" />
     <button id="submitButton">Query</button>
     <div id="spinner">Loading...</div>
-    <div id="graph"></div>
+    <svg id="graph" width="800" height="600"></svg>
 
     <script>
 document.getElementById("submitButton").addEventListener("click", () => {
@@ -25,7 +55,7 @@ document.getElementById("submitButton").addEventListener("click", () => {
     spinner.style.display = "block";
 
     // Send the query to the backend
-    fetch("http://127.0.0.1:8000/query", {
+    fetch("http://127.0.0.1:5000/query", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -43,14 +73,14 @@ document.getElementById("submitButton").addEventListener("click", () => {
             console.log("Received Data:", data);
 
             // Validate the response
-            if (!data || !data.nodes || !data.edges) {
+            if (!data || !data.response || !data.response.nodes || !data.response.edges) {
                 console.error("Invalid data format:", data);
                 alert("Error: Received invalid data from the server.");
                 return;
             }
 
             // Render the graph using D3.js
-            renderGraph(data);
+            renderGraph(data.response);
         })
         .catch((error) => {
             spinner.style.display = "none";
@@ -59,43 +89,54 @@ document.getElementById("submitButton").addEventListener("click", () => {
         });
 });
 
-// D3.js function stub for rendering the graph
 function renderGraph(data) {
-    const svg = d3.select("#graph"); // Assuming there's an SVG element with id="graph"
-    svg.selectAll("*").remove(); // Clear previous graph
+    const nodesMap = new Map(data.nodes.map(node => [node.id, node]));
 
-    const width = 800;
-    const height = 600;
+    // Map edges to reference node objects instead of strings
+    const edges = data.edges.map(edge => ({
+        source: nodesMap.get(edge.consumer),
+        target: nodesMap.get(edge.producer),
+        integration: edge.integration,
+        context: edge.context,
+    }));
 
-    // Set up the simulation
+    console.log("Mapped Edges:", edges);
+
+    // Proceed with D3 rendering...
+    const svg = d3.select("#graph");
+    svg.selectAll("*").remove();
+
+    const width = +svg.attr("width");
+    const height = +svg.attr("height");
+
     const simulation = d3.forceSimulation(data.nodes)
-        .force("link", d3.forceLink(data.edges).id(d => d.id).distance(150))
-        .force("charge", d3.forceManyBody().strength(-200))
+        .force("link", d3.forceLink(edges).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-300))
         .force("center", d3.forceCenter(width / 2, height / 2));
 
-    // Create links (edges)
-    const link = svg.selectAll(".link")
-        .data(data.edges)
+    const link = svg.append("g")
+        .selectAll(".link")
+        .data(edges)
         .enter()
         .append("line")
         .attr("class", "link")
         .style("stroke", "#999")
         .style("stroke-width", 2);
 
-    // Create nodes
-    const node = svg.selectAll(".node")
+    const node = svg.append("g")
+        .selectAll(".node")
         .data(data.nodes)
         .enter()
         .append("circle")
         .attr("class", "node")
-        .attr("r", 10)
+        .attr("r", 8)
         .style("fill", "#69b3a2")
         .call(
             d3.drag()
                 .on("start", (event, d) => {
                     if (!event.active) simulation.alphaTarget(0.3).restart();
-                    d.fx = d.x;
-                    d.fy = d.y;
+                    d.fx = event.x;
+                    d.fy = event.y;
                 })
                 .on("drag", (event, d) => {
                     d.fx = event.x;
@@ -108,18 +149,17 @@ function renderGraph(data) {
                 })
         );
 
-    // Add labels
-    const label = svg.selectAll(".label")
+    const label = svg.append("g")
+        .selectAll(".label")
         .data(data.nodes)
         .enter()
         .append("text")
         .attr("class", "label")
-        .attr("dy", -15)
+        .attr("dy", -10)
         .style("text-anchor", "middle")
         .style("font-size", "12px")
         .text(d => d.id);
 
-    // Update positions on each tick
     simulation.on("tick", () => {
         link
             .attr("x1", d => d.source.x)
@@ -136,6 +176,7 @@ function renderGraph(data) {
             .attr("y", d => d.y);
     });
 }
+
     </script>
 </body>
 </html>

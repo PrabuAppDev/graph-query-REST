@@ -3,197 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Integration Viewer</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>System Interactions</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        input[type="text"] {
-            width: 80%;
-            padding: 10px;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .spinner {
+        #spinner {
             display: none;
-            margin: 20px auto;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        svg {
-            border: 1px solid #ddd;
-            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>System Integration Viewer</h1>
-        <input type="text" id="queryInput" value="What are the different systems that Student Portal interacts with?">
-        <button id="submitButton">Query</button>
-        <div class="spinner" id="spinner"></div>
-        <svg id="graph" width="800" height="600"></svg>
-    </div>
+    <h1>System Interactions</h1>
+    <input id="queryInput" type="text" value="What are the systems that interact with Finance System?" />
+    <button id="submitButton">Query</button>
+    <div id="spinner">Loading...</div>
+    <div id="graph"></div>
 
     <script>
-        document.getElementById("submitButton").addEventListener("click", async () => {
-            const query = document.getElementById("queryInput").value;
-            if (!query.trim()) {
-                alert("Please enter a question.");
+document.getElementById("submitButton").addEventListener("click", () => {
+    const query = document.getElementById("queryInput").value;
+    const spinner = document.getElementById("spinner");
+    spinner.style.display = "block";
+
+    // Send the query to the backend
+    fetch("http://127.0.0.1:8000/query", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ "query": query }),
+    })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`Failed to fetch data. Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then((data) => {
+            spinner.style.display = "none";
+            console.log("Received Data:", data);
+
+            // Validate the response
+            if (!data || !data.nodes || !data.edges) {
+                console.error("Invalid data format:", data);
+                alert("Error: Received invalid data from the server.");
                 return;
             }
 
-            // Show spinner after button click
-            const spinner = document.getElementById("spinner");
-            spinner.style.display = "block";
-
-            try {
-                // Simulate fetching mock JSON
-                const mockResponse = {
-                    "query": "What are the different systems that Student Portal interacts with?",
-                    "nodes": [
-                        {"id": "Student Portal"},
-                        {"id": "Enrollment System"},
-                        {"id": "Finance System"},
-                        {"id": "Learning Management System"},
-                        {"id": "Student Database"}
-                    ],
-                    "edges": [
-                        {
-                            "source": "Student Portal",
-                            "target": "Enrollment System",
-                            "integration": "API",
-                            "subcategory": "Real-Time API"
-                        },
-                        {
-                            "source": "Finance System",
-                            "target": "Student Portal",
-                            "integration": "REST-JSON",
-                            "subcategory": "Asynchronous"
-                        },
-                        {
-                            "source": "Learning Management System",
-                            "target": "Student Portal",
-                            "integration": "ETL",
-                            "subcategory": "Batch Process"
-                        },
-                        {
-                            "source": "Student Portal",
-                            "target": "Student Database",
-                            "integration": "GraphQL",
-                            "subcategory": "Query-Based"
-                        }
-                    ]
-                };
-
-                // Simulate a latency before showing the response
-                await new Promise(resolve => setTimeout(resolve, 1000)); // 1000ms delay
-
-                spinner.style.display = "none";
-                renderGraph(mockResponse);
-
-            } catch (error) {
-                console.error("Error:", error);
-                spinner.style.display = "none";
-                alert("Failed to fetch data. Please try again later.");
-            }
+            // Render the graph using D3.js
+            renderGraph(data);
+        })
+        .catch((error) => {
+            spinner.style.display = "none";
+            console.error("Error:", error);
+            alert(`Error: ${error.message}`);
         });
+});
 
-        function renderGraph(data) {
-            const svg = d3.select("#graph");
-            svg.selectAll("*").remove(); // Clear previous graph
+// D3.js function stub for rendering the graph
+function renderGraph(data) {
+    const svg = d3.select("#graph"); // Assuming there's an SVG element with id="graph"
+    svg.selectAll("*").remove(); // Clear previous graph
 
-            const width = +svg.attr("width");
-            const height = +svg.attr("height");
+    const width = 800;
+    const height = 600;
 
-            const simulation = d3.forceSimulation(data.nodes)
-                .force("link", d3.forceLink(data.edges).id(d => d.id).distance(150))
-                .force("charge", d3.forceManyBody().strength(-300))
-                .force("center", d3.forceCenter(width / 2, height / 2));
+    // Set up the simulation
+    const simulation = d3.forceSimulation(data.nodes)
+        .force("link", d3.forceLink(data.edges).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-200))
+        .force("center", d3.forceCenter(width / 2, height / 2));
 
-            const link = svg.append("g")
-                .selectAll("line")
-                .data(data.edges)
-                .enter()
-                .append("line")
-                .attr("stroke", "#aaa")
-                .attr("stroke-width", 2);
+    // Create links (edges)
+    const link = svg.selectAll(".link")
+        .data(data.edges)
+        .enter()
+        .append("line")
+        .attr("class", "link")
+        .style("stroke", "#999")
+        .style("stroke-width", 2);
 
-            const node = svg.append("g")
-                .selectAll("circle")
-                .data(data.nodes)
-                .enter()
-                .append("circle")
-                .attr("r", 10)
-                .attr("fill", "#3498db")
-                .call(d3.drag()
-                    .on("start", dragStarted)
-                    .on("drag", dragged)
-                    .on("end", dragEnded));
+    // Create nodes
+    const node = svg.selectAll(".node")
+        .data(data.nodes)
+        .enter()
+        .append("circle")
+        .attr("class", "node")
+        .attr("r", 10)
+        .style("fill", "#69b3a2")
+        .call(
+            d3.drag()
+                .on("start", (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                })
+                .on("drag", (event, d) => {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                })
+                .on("end", (event, d) => {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                })
+        );
 
-            const text = svg.append("g")
-                .selectAll("text")
-                .data(data.nodes)
-                .enter()
-                .append("text")
-                .text(d => d.id)
-                .attr("font-size", 12)
-                .attr("dx", 15)
-                .attr("dy", 4);
+    // Add labels
+    const label = svg.selectAll(".label")
+        .data(data.nodes)
+        .enter()
+        .append("text")
+        .attr("class", "label")
+        .attr("dy", -15)
+        .style("text-anchor", "middle")
+        .style("font-size", "12px")
+        .text(d => d.id);
 
-            simulation.on("tick", () => {
-                link
-                    .attr("x1", d => d.source.x)
-                    .attr("y1", d => d.source.y)
-                    .attr("x2", d => d.target.x)
-                    .attr("y2", d => d.target.y);
+    // Update positions on each tick
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
 
-                node
-                    .attr("cx", d => d.x)
-                    .attr("cy", d => d.y);
+        node
+            .attr("cx", d => d.x)
+            .attr("cy", d => d.y);
 
-                text
-                    .attr("x", d => d.x)
-                    .attr("y", d => d.y);
-            });
-
-            function dragStarted(event, d) {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
-            }
-
-            function dragged(event, d) {
-                d.fx = event.x;
-                d.fy = event.y;
-            }
-
-            function dragEnded(event, d) {
-                if (!event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
-            }
-        }
+        label
+            .attr("x", d => d.x)
+            .attr("y", d => d.y);
+    });
+}
     </script>
 </body>
 </html>

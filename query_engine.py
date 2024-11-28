@@ -34,7 +34,7 @@ integration_data = load_csv(file_path)
 # Display the first few rows for inspection
 if integration_data is not None:
     print("Sample Data:")
-    display(integration_data.head())
+    print(integration_data.head())
 
 
 # In[3]:

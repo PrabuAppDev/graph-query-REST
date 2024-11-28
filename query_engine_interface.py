@@ -5,6 +5,13 @@ import qdrant_client
 from qdrant_client.http.models import PointStruct
 from openai import OpenAI
 
+__all__ = [
+    "generate_json_with_openai_few_shot",
+    "retrieve_context_from_vector_db",
+    "setup_vector_db",
+    "construct_graph",
+]
+
 # -------------------- Load CSV and Construct Graph --------------------
 
 def load_csv(file_path):
@@ -17,6 +24,7 @@ def load_csv(file_path):
         print(f"Error loading CSV: {e}")
         return None
 
+
 def construct_graph(data):
     """Construct a graph representation from CSV data."""
     nodes = list(set(data['Consumer']).union(set(data['Producer'])))
@@ -25,15 +33,11 @@ def construct_graph(data):
             "Consumer": "consumer",
             "Producer": "producer",
             "Integration Type": "integration",
-            "Context-Domain": "context"
+            "Context-Domain": "context",
         }
     ).to_dict(orient="records")
+    return {"nodes": [{"id": node} for node in nodes], "edges": edges}
 
-    graph = {
-        "nodes": [{"id": node} for node in nodes],
-        "edges": edges
-    }
-    return graph
 
 # -------------------- Vector Database Setup --------------------
 
@@ -43,20 +47,13 @@ def setup_vector_db(graph):
     """Create and populate an in-memory vector database with graph data."""
     try:
         client = qdrant_client.QdrantClient(":memory:")
-        
-        # Delete existing collection if it exists
         if client.collection_exists("systems"):
             client.delete_collection("systems")
-        
-        # Create a new collection
         client.create_collection(
             collection_name="systems",
-            vectors_config=qdrant_client.http.models.VectorParams(
-                size=384, distance="Cosine"
-            )
+            vectors_config=qdrant_client.http.models.VectorParams(size=384, distance="Cosine")
         )
 
-        # Add data to the vector database
         points = []
         for edge in graph["edges"]:
             text = f"{edge['consumer']} interacts with {edge['producer']} via {edge['integration']}"
@@ -65,12 +62,7 @@ def setup_vector_db(graph):
                 PointStruct(
                     id=len(points),
                     vector=embedding,
-                    payload={
-                        "consumer": edge["consumer"],
-                        "producer": edge["producer"],
-                        "integration": edge["integration"],
-                        "context": edge["context"]
-                    }
+                    payload=edge,
                 )
             )
 
@@ -80,6 +72,7 @@ def setup_vector_db(graph):
     except Exception as e:
         print(f"Error setting up vector database: {e}")
         return None
+
 
 # -------------------- Retrieve Context --------------------
 
@@ -97,6 +90,7 @@ def retrieve_context_from_vector_db(client, query, top_k=5):
         print(f"Error querying vector database: {e}")
         return []
 
+
 # -------------------- OpenAI Integration --------------------
 
 # Initialize OpenAI client
@@ -105,7 +99,6 @@ openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 def generate_response(messages, model="gpt-4o-mini", max_tokens=500, temperature=0.7):
     """Generate a response using OpenAI API."""
     try:
-        print(f"Sending request to OpenAI with messages: {messages}")
         response = openai_client.chat.completions.create(
             model=model,
             messages=messages,
@@ -118,13 +111,12 @@ def generate_response(messages, model="gpt-4o-mini", max_tokens=500, temperature
         return None
 
 def generate_json_with_openai_few_shot(context, query):
-    """Generate a strict JSON response using the OpenAI API with few-shot examples."""
+    """Generate a JSON response using OpenAI API with few-shot examples."""
     try:
         formatted_context = "\n".join([
             f"Consumer: {item['consumer']}, Producer: {item['producer']}, Integration: {item['integration']}, Context: {item['context']}"
             for item in context
         ])
-
         few_shot_examples = """
 Example 1:
 Context:
@@ -144,48 +136,48 @@ JSON Response:
   ]
 }
 """
-
         messages = [
             {"role": "system", "content": "You are an assistant that generates JSON responses."},
             {"role": "user", "content": few_shot_examples},
-            {"role": "user", "content": f"Context:\n{formatted_context}\nQuestion: {query}\nJSON Response:"}
+            {"role": "user", "content": f"Context: {formatted_context}\nQuestion: {query}\nJSON Response:"},
         ]
-
-        response_content = generate_response(messages, model="gpt-4o-mini", max_tokens=500, temperature=0.0)
-        return response_content.strip()
+        return generate_response(messages, model="gpt-4o-mini", max_tokens=500, temperature=0.0)
     except Exception as e:
         print(f"Error generating JSON response with OpenAI: {e}")
         return None
 
-# -------------------- Main Function --------------------
+
+# -------------------- Main Function for Testing --------------------
 
 if __name__ == "__main__":
     # Load CSV
-    file_path = 'sample_integration_data.csv'
+    file_path = "sample_integration_data.csv"
     integration_data = load_csv(file_path)
     if integration_data is None:
         exit("Failed to load CSV.")
 
-    # Construct Graph
+    # Construct graph
     graph = construct_graph(integration_data)
     print("Graph Representation:")
     print("Nodes:", graph["nodes"])
     print("Edges:", graph["edges"])
 
-    # Set Up Vector DB
+    # Set up vector database
     vector_db_client = setup_vector_db(graph)
     if not vector_db_client:
         exit("Failed to set up vector database.")
 
-    # Query Vector DB
-    query = "What are the systems that interact with Finance System?"
-    retrieved_context = retrieve_context_from_vector_db(vector_db_client, query)
-    if not retrieved_context:
-        exit("No context retrieved from vector database.")
+    # Test query
+    test_query = "What are the systems that interact with Finance System?"
+    retrieved_context = retrieve_context_from_vector_db(vector_db_client, test_query)
+    print("Retrieved Context:", retrieved_context)
 
-    # Generate JSON Response
-    json_response = generate_json_with_openai_few_shot(retrieved_context, query)
-    if json_response:
-        print("Generated JSON Response:", json_response)
+    if retrieved_context:
+        # Generate JSON response
+        json_response = generate_json_with_openai_few_shot(retrieved_context, test_query)
+        if json_response:
+            print("Generated JSON Response:", json_response)
+        else:
+            print("Failed to generate JSON response.")
     else:
-        print("Failed to generate JSON response.")
+        print("No context retrieved from vector database.")

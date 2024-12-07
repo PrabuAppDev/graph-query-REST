@@ -327,3 +327,219 @@ if retrieved_context:
 else:
     print("No context retrieved from Vector DB.")
 
+
+import json
+import logging
+
+# Initialize logging
+logger = logging.getLogger(__name__)
+
+def create_prompt(query, context):
+    """
+    Create a prompt for AWS Bedrock to ensure a single JSON response.
+
+    Args:
+        query (str): User's query.
+        context (list): List of interactions (source, target, integration, context).
+
+    Returns:
+        str: Formatted prompt for Bedrock.
+    """
+    # Log the context for debugging
+    logging.info(f"Creating prompt with context: {context}")
+
+    formatted_context = []
+    for item in context:
+        try:
+            # Normalize keys to title case
+            normalized_item = {
+                "Source": item.get("source", ""),
+                "Target": item.get("target", ""),
+                "Integration": item.get("integration", ""),
+                "Context": item.get("context", "")
+            }
+            formatted_context.append(
+                f"Source: {normalized_item['Source']}, Target: {normalized_item['Target']}, "
+                f"Integration: {normalized_item['Integration']}, Context: {normalized_item['Context']}"
+            )
+        except KeyError as e:
+            logging.warning(f"Missing key in context item: {item}. Error: {e}")
+            continue  # Skip items with missing keys
+
+    # Join formatted context items
+    formatted_context_str = "\n".join(formatted_context)
+
+    prompt = f"""
+<s>[INST] <<SYS>>
+You are a structured data generation assistant. Your task is to generate a single cohesive JSON response based on the given context and query.
+
+Rules:
+1. The response must be a single JSON object with the following structure:
+   {{
+       "nodes": [
+           {{"id": "System Name"}},
+           ...
+       ],
+       "edges": [
+           {{"source": "System A", "target": "System B", "integration": "Type", "context": "Details"}},
+           ...
+       ]
+   }}
+2. Do not split the JSON into multiple sections.
+3. Do not include any text outside the JSON object.
+4. Deduplicate nodes and edges in the response.
+
+Query: What are the systems that interact with "{query}"?
+
+Context:
+{formatted_context_str}
+
+Response:
+</SYS> </INST>
+"""
+    logging.info(f"Generated prompt:\n{prompt}")
+    return prompt
+
+
+import json
+import re
+import logging
+
+import json
+import re
+import logging
+
+def extract_json_from_response(response):
+    """
+    Extract valid JSON from Bedrock's response, handling explanatory text.
+
+    Args:
+        response (dict): The response from AWS Bedrock.
+
+    Returns:
+        dict: Cleaned and deduplicated JSON object with nodes and edges.
+    """
+    try:
+        # Get the raw response text from the "generation" field
+        response_text = response.get("generation", "").strip()
+        logging.info(f"Raw Bedrock Response Text:\n{response_text}\n")
+
+        # Use regex to extract the JSON object
+        json_match = re.search(r"\{(?:.|\n)*\}", response_text)
+        if not json_match:
+            raise ValueError("Valid JSON object not found in the response.")
+
+        # Extract the JSON string
+        json_string = json_match.group(0).strip()
+        logging.info(f"Extracted JSON String:\n{json_string}")
+
+        # Parse the JSON string
+        parsed_json = json.loads(json_string)
+
+        # Deduplicate nodes and edges
+        nodes = {node["id"]: node for node in parsed_json.get("nodes", [])}.values()
+        edges = {
+            (edge["source"], edge["target"], edge["integration"], edge["context"]): edge
+            for edge in parsed_json.get("edges", [])
+        }.values()
+
+        # Return the cleaned JSON object
+        return {"nodes": list(nodes), "edges": list(edges)}
+
+    except json.JSONDecodeError as e:
+        logging.error(f"Error parsing JSON: {e}")
+        raise ValueError("Error parsing JSON from response.")
+    except Exception as e:
+        logging.error(f"Error extracting JSON: {e}")
+        raise
+# In[12]: Bedrock method
+import boto3
+import os
+import json
+import logging
+from botocore.exceptions import ClientError
+
+logger = logging.getLogger(__name__)
+
+def generate_json_with_bedrock(bedrock_client, inference_profile_arn, query, context):
+    """
+    Generate a JSON response using AWS Bedrock.
+
+    Args:
+        bedrock_client: AWS Bedrock client.
+        inference_profile_arn (str): The ARN of the inference profile to use.
+        query (str): User query.
+        context (list): Context of interactions.
+
+    Returns:
+        dict: Generated JSON response.
+    """
+    try:
+        # Create the prompt
+        prompt = create_prompt(query, context)
+
+        # Prepare request body
+        body = json.dumps({
+            "prompt": prompt,
+            "max_gen_len": 1500,
+            "temperature": 0.1,
+            "top_p": 0.9
+        })
+
+        # Invoke Bedrock
+        response = bedrock_client.invoke_model(
+            body=body,
+            modelId=inference_profile_arn,
+            contentType="application/json",
+            accept="application/json",
+        )
+
+        # Parse the response body
+        response_body = json.loads(response["body"].read())
+        extracted_json = extract_json_from_response(response_body)
+
+        return extracted_json
+
+    except Exception as e:
+        logger.error(f"Error generating JSON with Bedrock: {e}")
+        raise
+# %%
+def generate_json_from_context(context):
+    """
+    Generate a JSON response with nodes and edges from the given context.
+
+    Args:
+        context (list): List of interactions containing source, target, integration, and context.
+
+    Returns:
+        dict: JSON object with deduplicated nodes and edges.
+    """
+    try:
+        logging.info(f"Generating JSON from context: {context}")
+
+        # Create nodes and edges
+        nodes = {entry["Source"]: {"id": entry["Source"]} for entry in context}
+        nodes.update({entry["Target"]: {"id": entry["Target"]} for entry in context})
+
+        edges = [
+            {
+                "source": entry["Source"],
+                "target": entry["Target"],
+                "integration": entry["Integration"],
+                "context": entry["Context"]
+            }
+            for entry in context
+        ]
+
+        # Deduplicate edges
+        unique_edges = {
+            (edge["source"], edge["target"], edge["integration"], edge["context"]): edge
+            for edge in edges
+        }.values()
+
+        # Return final JSON
+        return {"nodes": list(nodes.values()), "edges": list(unique_edges)}
+
+    except Exception as e:
+        logging.error(f"Error generating JSON from context: {e}")
+        raise

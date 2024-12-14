@@ -19,6 +19,7 @@ the AWS SDK for Python (Boto3). It covers the following steps:
 """
 
 import asyncio
+import os
 import boto3
 import io
 import json
@@ -35,7 +36,7 @@ from botocore.exceptions import ClientError
 from bedrock_agent_wrapper import BedrockAgentWrapper
 
 # Add relative path to include demo_tools in this code example without needing to set up.
-sys.path.append("../..")
+# sys.path.append("../..")
 import demo_tools.question as q
 from demo_tools.retries import wait
 
@@ -314,6 +315,7 @@ class BedrockAgentScenarioWrapper:
 
         try:
             with open("./scenario_resources/api_schema.yaml") as file:
+            # with open("api_schema.yaml") as file:
                 self.bedrock_wrapper.create_agent_action_group(
                     name="current_date_and_time",
                     description="Gets the current date and time.",
@@ -353,7 +355,7 @@ class BedrockAgentScenarioWrapper:
 
     def _wait_for_agent_status(self, agent_id, status):
         while self.bedrock_wrapper.get_agent(agent_id)["agentStatus"] != status:
-            wait(2)
+            wait(5)
 
     def _chat_with_agent(self, agent_alias):
         print("-" * 88)
@@ -369,8 +371,8 @@ class BedrockAgentScenarioWrapper:
             if prompt == "exit":
                 break
 
+            print(f"Agent Alias Status: {agent_alias['agentAliasStatus']}")
             response = asyncio.run(self._invoke_agent(agent_alias, prompt, session_id))
-
             print(f"Agent: {response}")
 
     async def _invoke_agent(self, agent_alias, prompt, session_id):
@@ -455,6 +457,7 @@ class BedrockAgentScenarioWrapper:
         with zipfile.ZipFile(buffer, "w") as zipped:
             zipped.write(
                 "./scenario_resources/lambda_function.py", f"{function_name}.py"
+                # "lambda_function.py", f"{function_name}.py"
             )
         buffer.seek(0)
         return buffer.read()
@@ -466,19 +469,36 @@ if __name__ == "__main__":
     postfix = "".join(
         random.choice(string.ascii_lowercase + "0123456789") for _ in range(8)
     )
+
+    # Initialize a session using the specified profile
+    # boto3.set_stream_logger(name="boto3", level=logging.DEBUG)
+    # boto3.set_stream_logger(name="botocore", level=logging.DEBUG)
+
+    # Specify the AWS CLI profile to use
+    AWS_PROFILE = "AWS_PROFILE_CLI"
+
+    session = boto3.Session(profile_name=AWS_PROFILE)   
     scenario = BedrockAgentScenarioWrapper(
-        bedrock_agent_client=boto3.client(
+        bedrock_agent_client=session.client(
             service_name="bedrock-agent", region_name=REGION
         ),
-        runtime_client=boto3.client(
+        runtime_client=session.client(
             service_name="bedrock-agent-runtime", region_name=REGION
         ),
-        lambda_client=boto3.client(service_name="lambda", region_name=REGION),
-        iam_resource=boto3.resource("iam"),
+        lambda_client=session.client(service_name="lambda", region_name=REGION),
+        iam_resource=session.resource("iam"),
         postfix=postfix,
     )
     try:
+
+        # Change the working directory to the script's location
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        # Confirm the current working directory after the change
+        print("Updated working directory:", os.getcwd())        
+        print("Current working directory:", os.getcwd())
+        print("Files in current directory:", os.listdir())
         scenario.run_scenario()
+        # scenario._delete_resources()
     except Exception as e:
         logging.exception(f"Something went wrong with the demo. Here's what: {e}")
 

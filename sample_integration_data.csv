@@ -1,0 +1,101 @@
+Consumer,Producer,Integration Type,Context-Domain
+Payroll System,Research Database,REST-JSON-RPC,Research
+Finance System,Analytics Dashboard,SFTP,Alumni Relations
+Finance System,HR System,ETL,Admissions
+IT Support System,Analytics Dashboard,SFTP,Student Services
+Finance System,Inventory System,ETL,Finance
+Alumni Portal,Course Registration System,CDC-Stream,Research
+Admissions Portal,Inventory System,Kafka-Stream,Inventory Management
+Research Database,Finance System,CDC-Stream,Student Services
+IT Support System,Library System,Event-Queue,Alumni Relations
+Student Portal,Finance System,SFTP,IT Support
+Payroll System,Library System,SFTP,Student Services
+Library System,Inventory System,CDC-Stream,Alumni Relations
+Analytics Dashboard,Admissions Portal,Event-Queue,Finance
+HR System,Finance System,REST-API,Inventory Management
+Finance System,Finance System,REST-JSON-RPC,Reporting
+Research Database,Library System,Web-Service-SOAP-HTTP,Admissions
+HR System,Admissions Portal,REST-API,Alumni Relations
+Student Portal,Finance System,Web-Service-SOAP-HTTP,Research
+IT Support System,Catalog System,Web-Service-SOAP-HTTP,Alumni Relations
+Analytics Dashboard,Library System,REST-API,Reporting
+Finance System,CRM System,ETL,Finance
+Alumni Portal,Inventory System,ETL,Admissions
+Library System,Student Portal,REST-API,Admissions
+Alumni Portal,Catalog System,Web-Service-SOAP-HTTP,Reporting
+Inventory System,Alumni Portal,Event-Queue,Inventory Management
+Analytics Dashboard,Alumni Portal,REST-API,Reporting
+Analytics Dashboard,Library System,Web-Service-SOAP-HTTP,Inventory Management
+Catalog System,HR System,CDC-Stream,Inventory Management
+Admissions Portal,Payroll System,REST-JSON-RPC,Library
+CRM System,Inventory System,Web-Service-SOAP-HTTP,Reporting
+Finance System,Catalog System,Event-Queue,Library
+Library System,Payroll System,SFTP,IT Support
+HR System,Payroll System,SFTP,Alumni Relations
+Student Portal,Research Database,Web-Service-SOAP-HTTP,Admissions
+Admissions Portal,CRM System,REST-API,Student Services
+HR System,Finance System,REST-API,Student Services
+HR System,Finance System,CDC-Stream,Alumni Relations
+Finance System,Admissions Portal,REST-JSON-RPC,Inventory Management
+Payroll System,CRM System,Web-Service-SOAP-HTTP,Research
+Research Database,Alumni Portal,REST-JSON-RPC,Student Services
+Research Database,Finance System,REST-API,Reporting
+Student Portal,Catalog System,CDC-Stream,Alumni Relations
+Analytics Dashboard,Course Registration System,Kafka-Stream,Finance
+Analytics Dashboard,Research Database,Event-Queue,Finance
+Course Registration System,Research Database,REST-JSON-RPC,Admissions
+CRM System,Alumni Portal,Web-Service-SOAP-HTTP,Library
+Analytics Dashboard,Student Portal,REST-JSON-RPC,Finance
+IT Support System,Research Database,CDC-Stream,Alumni Relations
+CRM System,Payroll System,ETL,IT Support
+HR System,Inventory System,CDC-Stream,Alumni Relations
+Inventory System,Research Database,REST-API,Finance
+Alumni Portal,IT Support System,REST-JSON-RPC,Research
+Finance System,Course Registration System,Event-Queue,Inventory Management
+Student Portal,Finance System,Web-Service-SOAP-HTTP,Research
+Finance System,Inventory System,SFTP,Student Services
+Research Database,Catalog System,REST-API,Admissions
+Student Portal,Inventory System,CDC-Stream,IT Support
+Catalog System,Inventory System,SFTP,Finance
+Alumni Portal,Student Portal,Kafka-Stream,Admissions
+CRM System,Admissions Portal,CDC-Stream,Library
+Admissions Portal,Analytics Dashboard,REST-JSON-RPC,Alumni Relations
+Payroll System,Alumni Portal,Web-Service-SOAP-HTTP,Student Services
+Admissions Portal,Research Database,REST-JSON-RPC,Student Services
+Student Portal,Student Portal,REST-API,Inventory Management
+Inventory System,Research Database,Event-Queue,Alumni Relations
+Payroll System,Research Database,REST-API,Admissions
+CRM System,IT Support System,SFTP,Inventory Management
+CRM System,Payroll System,ETL,Inventory Management
+Catalog System,Finance System,ETL,IT Support
+Alumni Portal,Alumni Portal,Kafka-Stream,Reporting
+Analytics Dashboard,Student Portal,REST-API,Inventory Management
+Library System,Student Portal,REST-API,Inventory Management
+IT Support System,Student Portal,SFTP,Inventory Management
+HR System,IT Support System,Kafka-Stream,Library
+Admissions Portal,HR System,Event-Queue,Finance
+Catalog System,Library System,SFTP,Alumni Relations
+Catalog System,Student Portal,Event-Queue,Admissions
+Student Portal,HR System,SFTP,Admissions
+Analytics Dashboard,Finance System,CDC-Stream,Admissions
+Admissions Portal,Research Database,Event-Queue,Research
+Student Portal,HR System,ETL,Inventory Management
+Admissions Portal,Student Portal,CDC-Stream,Student Services
+Alumni Portal,Research Database,Web-Service-SOAP-HTTP,Admissions
+Admissions Portal,Alumni Portal,REST-API,Inventory Management
+Research Database,Alumni Portal,CDC-Stream,Student Services
+Course Registration System,Admissions Portal,REST-JSON-RPC,Reporting
+Payroll System,Inventory System,CDC-Stream,Finance
+Student Portal,Library System,REST-JSON-RPC,Admissions
+Alumni Portal,HR System,REST-JSON-RPC,Finance
+Course Registration System,Analytics Dashboard,REST-API,Finance
+Course Registration System,Course Registration System,Kafka-Stream,Research
+Library System,Inventory System,REST-JSON-RPC,Inventory Management
+HR System,Admissions Portal,REST-API,IT Support
+Library System,Research Database,Kafka-Stream,Admissions
+Catalog System,IT Support System,SFTP,Inventory Management
+Payroll System,Payroll System,Event-Queue,Admissions
+Catalog System,Admissions Portal,Kafka-Stream,Inventory Management
+Admissions Portal,Library System,REST-JSON-RPC,Research
+Payroll System,IT Support System,Web-Service-SOAP-HTTP,Finance
+CRM System,Course Registration System,SFTP,Inventory Management

@@ -1,0 +1,73 @@
+openapi: 3.0.0
+info:
+  title: Graph Interaction Query API
+  version: 1.0.0
+  description: An API to query system interactions and return nodes and edges for D3.js visualization.
+paths:
+  /query:
+    post:
+      summary: Query system interactions
+      description: This endpoint processes a natural language query with context to retrieve nodes and edges for system interactions.
+      operationId: queryGraphInteractions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: The query string to search for system interactions.
+                context:
+                  type: array
+                  description: Context retrieved from a vector database to aid the query.
+                  items:
+                    type: object
+                    properties:
+                      consumer:
+                        type: string
+                        description: The consumer in the interaction.
+                      producer:
+                        type: string
+                        description: The producer in the interaction.
+                      integration:
+                        type: string
+                        description: The type of integration between systems, will be validated later.
+              required:
+                - query
+                - context
+      responses:
+        "200":
+          description: A JSON response with nodes and edges for visualization.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier for a node.
+                  edges:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        consumer:
+                          type: string
+                          description: The consumer in the interaction.
+                        producer:
+                          type: string
+                          description: The producer in the interaction.
+                        integration:
+                          type: string
+                          description: The type of integration (e.g., API, DB).
+        "400":
+          description: Bad request if the query parameters are missing or invalid.
+        "500":
+          description: Internal server error if there is an issue processing the request.

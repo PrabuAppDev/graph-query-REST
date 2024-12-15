@@ -31,19 +31,64 @@ logging.info("Bedrock Agent Runtime client initialized successfully!")
 
 def setup_vector_db(edges, drop_existing=True):
     client = QdrantClient(path=":memory:")
+    print("Qdrant Client initialized successfully.")
     if drop_existing and client.collection_exists("systems"):
+        print("Deleting existing collection...")
         client.delete_collection(collection_name="systems")
+        print("Existing collection deleted.")
+    else:
+        print("No existing collection found.")
     client.create_collection(collection_name="systems", vectors_config=VectorParams(size=384, distance="Cosine"))
+    print("Collection 'systems' created successfully.")
     populate_vector_db(client, edges)
     return client
 
 def populate_vector_db(client, edges):
     points = []
-    for idx, edge in enumerate(edges):
-        description = f"{edge['consumer']} interacts with {edge['producer']} via {edge['integration']}"
-        vector = vectorizer.encode(description).tolist()
-        points.append(PointStruct(id=idx, vector=vector, payload=edge))
-    client.upsert(collection_name="systems", points=points)
+    try:
+        print(f"Number of edges to process: {len(edges)}")
+
+        for idx, edge in enumerate(edges):
+            # Normalize keys
+            normalized_edge = {
+                "consumer": edge.get("Consumer"),
+                "producer": edge.get("Producer"),
+                "integration": edge.get("Integration Type")
+            }
+            print(f"Processing edge {idx}: {normalized_edge}")
+
+            # Validate the normalized edge
+            if not all(key in normalized_edge and normalized_edge[key] for key in ['consumer', 'producer', 'integration']):
+                raise ValueError(f"Edge {idx} is missing required keys: {normalized_edge}")
+
+            # Construct the description for vectorization
+            description = f"{normalized_edge['consumer']} interacts with {normalized_edge['producer']} via {normalized_edge['integration']}"
+            print(f"Edge description for vectorization: {description}")
+
+            # Generate vector for the description
+            vector = vectorizer.encode(description).tolist()
+            print(f"Generated vector (first 5 dimensions) for edge {idx}: {vector[:5]}")
+
+            # Validate vector size
+            expected_vector_size = 384
+            if len(vector) != expected_vector_size:
+                raise ValueError(f"Vector size mismatch for edge {idx}: expected {expected_vector_size}, got {len(vector)}")
+
+            # Create PointStruct and add to the list
+            point = PointStruct(
+                id=idx,
+                vector=vector,
+                payload=normalized_edge
+            )
+            points.append(point)
+
+        print(f"Number of points to upsert: {len(points)}")
+        client.upsert(collection_name="systems", points=points)
+        print("Upsert complete. Points have been added to the Qdrant collection.")
+
+    except Exception as e:
+        print(f"An error occurred in populate_vector_db: {e}")
+        raise
 
 def retrieve_context(client, query):
     vector = vectorizer.encode(query).tolist()

@@ -32,6 +32,8 @@ def load_csv_and_setup_db():
     try:
         csv_file = "sample_integration_data.csv"
         data = pd.read_csv(csv_file)
+        print("CSV Data Loaded Successfully:")
+        print(data.head())  # Show first few rows of the dataframe        
         edges = [row.to_dict() for index, row in data.iterrows()]
         vector_db_client = setup_vector_db(edges, drop_existing=True)
         logging.info("Vector database setup complete.")

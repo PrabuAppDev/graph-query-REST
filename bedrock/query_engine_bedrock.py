@@ -11,23 +11,27 @@ logging.basicConfig(level=logging.INFO)
 vectorizer = SentenceTransformer("paraphrase-MiniLM-L6-v2")
 
 # Load environment variables
-AWS_REGION = os.getenv("AWS_REGION", "us-east-2")
+AWS_REGION = os.getenv("AWS_REGION", "us-east-2")  # Default to "us-east-2" if not set
+AWS_PROFILE = "AWS_PROFILE_CLI"  # Default to "default" profile if not set
 AWS_BEDROCK_AGENT_ID = os.getenv("AWS_BEDROCK_AGENT_ID")
 AWS_BEDROCK_AGENT_ALIAS_ID = os.getenv("AWS_BEDROCK_AGENT_ALIAS_ID")
 
-# Validate environment variables
+# Validate required environment variables
 assert AWS_BEDROCK_AGENT_ID, "AWS_BEDROCK_AGENT_ID is not set"
 assert AWS_BEDROCK_AGENT_ALIAS_ID, "AWS_BEDROCK_AGENT_ALIAS_ID is not set"
 
-# Initialize Bedrock Agent Runtime client
-bedrock_agent_runtime_client = boto3.client(
-    service_name="bedrock-agent-runtime",
-    region_name=AWS_REGION,
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY")
-)
-
-logging.info("Bedrock Agent Runtime client initialized successfully!")
+# Initialize Bedrock Agent Runtime client using AWS profile
+try:
+    session = boto3.Session(profile_name=AWS_PROFILE)
+    logging.info(f"Initialized AWS session using profile: {AWS_PROFILE}")
+    bedrock_agent_runtime_client = session.client(
+        service_name="bedrock-agent-runtime",
+        region_name=AWS_REGION
+    )
+    logging.info("AWS Bedrock Agent Runtime client initialized successfully.")
+except Exception as e:
+    logging.error(f"Failed to initialize Bedrock Agent Runtime client: {e}")
+    raise
 
 def setup_vector_db(edges, drop_existing=True):
     client = QdrantClient(path=":memory:")
